@@ -1,0 +1,38 @@
+name: TotalSegmentator
+official_project: https://github.com/wasserth/TotalSegmentator
+sources:
+  ct:
+    record_id: "10047292"
+    doi: "10.5281/zenodo.10047292"
+    version: "2.0.1"
+    subjects: 1228
+    file: Totalsegmentator_dataset_v201.zip
+    size_bytes: 23581218285
+    md5: fe250e5718e0a3b5df4c4ea9d58a62fe
+    license: CC BY 4.0
+    url: https://zenodo.org/records/10047292/files/Totalsegmentator_dataset_v201.zip?download=1
+  mri:
+    record_id: "14710732"
+    doi: "10.5281/zenodo.14710732"
+    version: "2.0.0"
+    subjects: 616
+    file: TotalsegmentatorMRI_dataset_v200.zip
+    size_bytes: 5100514630
+    md5: 54638f4cb883ce3b34225195358c398f
+    license: CC BY-NC-SA 2.0
+    url: https://zenodo.org/records/14710732/files/TotalsegmentatorMRI_dataset_v200.zip?download=1
+  ct_small:
+    record_id: "10047263"
+    doi: "10.5281/zenodo.10047263"
+    version: "2.0.1"
+    subjects: 102
+    file: Totalsegmentator_dataset_small_v201.zip
+    size_bytes: null
+    md5: 6b5524af4b15e6ba06ef2d700c0c73e0
+    license: See Zenodo record
+    url: https://zenodo.org/records/10047263/files/Totalsegmentator_dataset_small_v201.zip?download=1
+layout:
+  archives: data/raw/archives
+  extracted: data/raw/extracted
+  manifests: data/manifests
+  splits: data/splits

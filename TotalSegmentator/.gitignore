@@ -1,0 +1,11 @@
+logs/
+cache/
+data/raw/archives/
+data/raw/extracted/
+data/processed/
+data/manifests/download_status.json
+*.pid
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
