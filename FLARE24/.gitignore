@@ -1,0 +1,16 @@
+logs/
+cache/
+secrets/
+*.log
+*.pid
+*.token
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+data/raw/huggingface/
+data/raw/archives/
+data/raw/extracted/
+data/processed/
+data/manifests/download_status.json
+data/manifests/proxy_speedtest.csv
