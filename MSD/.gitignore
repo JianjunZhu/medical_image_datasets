@@ -1,0 +1,10 @@
+logs/
+cache/
+data/raw/archives/
+data/raw/extracted/
+data/processed/
+*.pid
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/

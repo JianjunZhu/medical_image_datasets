@@ -1,0 +1,29 @@
+name: MSD
+full_name: Medical Segmentation Decathlon
+source:
+  type: aws_open_data_s3
+  url: https://registry.opendata.aws/msd/
+  bucket: msd-for-monai
+  region: us-west-2
+  google_drive_folder_id: 1HqEgzS8BV2c7xYNrZdEAnrHk7osJJ--2
+download:
+  default_tool: s3curl
+  alternate_tools:
+    - gdown
+    - rclone
+  uses_proxy: true
+  default_proxy_host: 127.0.0.1:17890
+  background_entrypoint: scripts/start_download.sh
+  foreground_entrypoint: scripts/download.sh
+  status_entrypoint: scripts/status_download.sh
+  stop_entrypoint: scripts/stop_download.sh
+paths:
+  archives: data/raw/archives
+  extracted: data/raw/extracted
+  processed: data/processed
+  manifests: data/manifests
+  splits: data/splits
+status:
+  download_status: data/manifests/download_status.json
+  download_log: logs/download.log
+  download_pid: logs/download.pid

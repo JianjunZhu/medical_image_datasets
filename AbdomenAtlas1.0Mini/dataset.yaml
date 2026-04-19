@@ -1,0 +1,29 @@
+name: AbdomenAtlas1.0Mini
+source:
+  type: huggingface
+  repo: AbdomenAtlas/AbdomenAtlas1.0Mini
+  url: https://huggingface.co/datasets/AbdomenAtlas/AbdomenAtlas1.0Mini
+license: cc-by-nc-sa-4.0
+access: gated
+task: medical image segmentation
+modality: CT
+format: NIfTI gzip
+cases: 5195
+files:
+  ct: ct.nii.gz
+  combined_labels: combined_labels.nii.gz
+  segmentations_dir: segmentations
+labels:
+  - aorta
+  - gall_bladder
+  - kidney_left
+  - kidney_right
+  - liver
+  - pancreas
+  - postcava
+  - spleen
+  - stomach
+current_layout:
+  raw_case_dirs: data/raw, matching BDMAP_*
+  manifest: data/manifests/manifest.csv
+  original_dataset_card: docs/huggingface_dataset_card.md

@@ -1,0 +1,23 @@
+# Runtime and local metadata
+.codex
+*.log
+*.pid
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets
+secrets/
+*.token
+*.key
+*.pem
+
+# Dataset payloads and generated data
+*/data/raw/archives/
+*/data/raw/extracted/
+*/data/raw/BDMAP_*/
+*/data/processed/
+
+# Local runtime state
+*/logs/
+*/cache/

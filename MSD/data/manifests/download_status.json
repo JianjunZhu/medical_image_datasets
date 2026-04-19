@@ -1,0 +1,15 @@
+{
+  "dataset": "MSD",
+  "source_url": "https://msd-for-monai-eu.s3.eu-west-2.amazonaws.com",
+  "folder_id": "1HqEgzS8BV2c7xYNrZdEAnrHk7osJJ--2",
+  "download_tool": "s3curl",
+  "download_dir": "data/raw/archives",
+  "use_proxy": "0",
+  "proxy_host": "127.0.0.1:17890",
+  "pid": 2337404,
+  "status": "completed",
+  "last_checked_at": "2026-04-19T15:37:10+08:00",
+  "finished_at": "2026-04-19T15:37:10+08:00",
+  "downloaded_files": 12,
+  "downloaded_bytes": 75912200430
+}

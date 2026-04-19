@@ -1,0 +1,10 @@
+secrets/
+logs/
+cache/
+data/raw/BDMAP_*/
+data/processed/
+*.pid
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
