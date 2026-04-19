@@ -1,4 +1,4 @@
-"""Image I/O helpers for FLARE24."""
+"""Image I/O helpers for FLARE-MedFM."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 # Raw Data
 
-Original FLARE24/FLARE-MedFM payloads belong here and are excluded from Git.
+Original FLARE-MedFM payloads belong here and are excluded from Git.
 
 - `huggingface/`: gated Hugging Face dataset snapshots downloaded with `huggingface_hub`.
 - `archives/`: reserved for source archives if a mirror provides archive files.

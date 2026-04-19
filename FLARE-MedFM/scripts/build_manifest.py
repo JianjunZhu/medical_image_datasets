@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build a lightweight FLARE24 NIfTI manifest."""
+"""Build a lightweight FLARE-MedFM file manifest."""
 
 from __future__ import annotations
 
@@ -8,11 +8,20 @@ import csv
 from pathlib import Path
 
 
-TASK_DIRS = {
-    "FLARE-Task1-Pancancer": "task1",
-    "FLARE-Task2-LaptopSeg": "task2",
-    "FLARE-Task3-DomainAdaption": "task3",
+DATASET_DIRS = {
+    "PancancerCTSeg": "pancancer_ct_seg",
+    "FLARE-Task2-LaptopSeg": "task2_laptop_seg",
+    "FLARE-Task3-DomainAdaption": "task3_domain_adaptation",
+    "FLARE-Task4-CT-FM": "task4_ct_fm",
+    "FLARE-Task4-MRI-FM": "task4_mri_fm",
+    "FLARE26-MLLM-3D": "flare26_mllm_3d",
+    "FLARE-Task5-MLLM-2D": "task5_mllm_2d",
+    "FLARE-Task6-MedAgent": "task6_medagent",
+    "FLARE-Task1-PancancerRECIST-to-3D": "task1_recist_to_3d",
+    "FLARE-Task1-PancancerRECIST-to-3D-Dockers": "task1_recist_to_3d_dockers",
 }
+
+IMAGE_SUFFIXES = (".nii.gz", ".nii", ".mha", ".mhd", ".nrrd", ".png", ".jpg", ".jpeg")
 
 
 def strip_nii_gz(path: Path) -> str:
@@ -58,22 +67,36 @@ def infer_modality(parts: tuple[str, ...]) -> str:
     return "CT"
 
 
+def is_supported_image(path: Path) -> bool:
+    name = path.name.lower()
+    return any(name.endswith(suffix) for suffix in IMAGE_SUFFIXES)
+
+
+def dataset_from_parts(parts: tuple[str, ...]) -> tuple[str, str]:
+    for dirname, key in DATASET_DIRS.items():
+        if dirname in parts:
+            return key, dirname
+    return "", ""
+
+
 def build_label_index(search_roots: list[Path], dataset_root: Path) -> dict[tuple[str, str], Path]:
     labels: dict[tuple[str, str], Path] = {}
     for root in search_roots:
         if not root.exists():
             continue
-        for path in root.rglob("*.nii.gz"):
+        for path in root.rglob("*"):
+            if not path.is_file() or not is_supported_image(path):
+                continue
             if path.name.startswith("._"):
                 continue
             rel = path.relative_to(dataset_root)
             lower = "/".join(rel.parts).lower()
             if "label" not in lower and "mask" not in lower and "seg" not in lower:
                 continue
-            task = next((value for key, value in TASK_DIRS.items() if key in rel.parts), "")
-            if not task:
+            dataset_key, _ = dataset_from_parts(rel.parts)
+            if not dataset_key:
                 continue
-            labels[(task, strip_nii_gz(path))] = path
+            labels[(dataset_key, strip_nii_gz(path))] = path
     return labels
 
 
@@ -96,23 +119,24 @@ def main() -> int:
     for search_root in search_roots:
         if not search_root.exists():
             continue
-        for image in sorted(search_root.rglob("*.nii.gz")):
+        for image in sorted(search_root.rglob("*")):
+            if not image.is_file() or not is_supported_image(image):
+                continue
             if image.name.startswith("._"):
                 continue
             rel = image.relative_to(root)
             lower = "/".join(rel.parts).lower()
             if "label" in lower or "mask" in lower or "seg" in lower:
                 continue
-            task = next((value for key, value in TASK_DIRS.items() if key in rel.parts), "")
-            task_dir = next((key for key in TASK_DIRS if key in rel.parts), "")
-            if not task:
+            dataset_key, dataset_dir = dataset_from_parts(rel.parts)
+            if not dataset_key:
                 continue
             case_id = case_id_from_image(image)
-            label = label_index.get((task, case_id))
+            label = label_index.get((dataset_key, case_id))
             rows.append(
                 {
-                    "task": task,
-                    "task_dir": task_dir,
+                    "dataset": dataset_key,
+                    "dataset_dir": dataset_dir,
                     "case_id": case_id,
                     "split": infer_split(rel.parts),
                     "modality": infer_modality(rel.parts),
@@ -125,8 +149,8 @@ def main() -> int:
             )
 
     fieldnames = [
-        "task",
-        "task_dir",
+        "dataset",
+        "dataset_dir",
         "case_id",
         "split",
         "modality",

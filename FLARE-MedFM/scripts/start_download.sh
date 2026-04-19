@@ -19,4 +19,4 @@ fi
 
 nohup setsid bash "${script_dir}/download.sh" >> "${log_file}" 2>&1 < /dev/null &
 echo $! > "${pid_file}"
-echo "started FLARE24 download pid=$(cat "${pid_file}") log=${log_file}"
+echo "started FLARE-MedFM download pid=$(cat "${pid_file}") log=${log_file}"

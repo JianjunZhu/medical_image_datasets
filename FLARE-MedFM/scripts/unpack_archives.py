@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Unpack nested FLARE24 archives from raw Hugging Face snapshots."""
+"""Unpack nested FLARE-MedFM archives from raw Hugging Face snapshots."""
 
 from __future__ import annotations
 

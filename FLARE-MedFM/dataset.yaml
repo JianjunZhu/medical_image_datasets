@@ -1,0 +1,62 @@
+name: FLARE-MedFM
+full_name: "FLARE-MedFM Hugging Face dataset collection"
+homepage: https://huggingface.co/FLARE-MedFM
+project_homepage: https://flare-medfm.github.io/
+access: gated
+raw_data_dir: data/raw/huggingface
+extracted_data_dir: data/raw/extracted
+datasets:
+  pancancer_ct_seg:
+    repo: FLARE-MedFM/PancancerCTSeg
+    license: cc-by-nc-4.0
+    notes: "Pan-cancer CT segmentation dataset; successor/current repo name for FLARE Task1 Pancancer."
+  task2_laptop_seg:
+    repo: FLARE-MedFM/FLARE-Task2-LaptopSeg
+    license: cc-by-nc-4.0
+    notes: "Abdominal CT organ segmentation on laptop."
+  task3_domain_adaptation:
+    repo: FLARE-MedFM/FLARE-Task3-DomainAdaption
+    license: cc-by-nc-4.0
+    notes: "Unsupervised domain adaptation for abdominal organ segmentation in MRI and PET scans."
+  task4_ct_fm:
+    repo: FLARE-MedFM/FLARE-Task4-CT-FM
+    license: cc-by-nc-4.0
+    notes: "CT foundation model development dataset."
+  task4_mri_fm:
+    repo: FLARE-MedFM/FLARE-Task4-MRI-FM
+    license: cc-by-nc-4.0
+    notes: "MRI foundation model development dataset."
+  flare26_mllm_3d:
+    repo: FLARE-MedFM/FLARE26-MLLM-3D
+    license: cc-by-nc-4.0
+    notes: "3D multimodal large language model dataset."
+  task5_mllm_2d:
+    repo: FLARE-MedFM/FLARE-Task5-MLLM-2D
+    license: cc-by-nc-4.0
+    notes: "2D multimodal medical image parsing dataset."
+  task6_medagent:
+    repo: FLARE-MedFM/FLARE-Task6-MedAgent
+    license: cc-by-nc-4.0
+    notes: "Medical agent task dataset."
+  task1_recist_to_3d:
+    repo: FLARE-MedFM/FLARE-Task1-PancancerRECIST-to-3D
+    license: cc-by-nc-sa-4.0
+    notes: "Pancancer RECIST-to-3D dataset."
+  task1_recist_to_3d_dockers:
+    repo: FLARE-MedFM/FLARE-Task1-PancancerRECIST-to-3D-Dockers
+    license: unknown
+    notes: "Docker resources for Pancancer RECIST-to-3D."
+download:
+  default_datasets: pancancer_ct_seg,task2_laptop_seg,task3_domain_adaptation,task4_ct_fm,task4_mri_fm,flare26_mllm_3d,task5_mllm_2d,task6_medagent,task1_recist_to_3d,task1_recist_to_3d_dockers
+  tool: huggingface_hub.snapshot_download
+  resume: true
+  requires_token: true
+  token_sources:
+    - HF_TOKEN
+    - secrets/hf_token
+  raw_destination: data/raw/huggingface
+  proxy:
+    direct_baseline: true
+    dedicated_proxy_supported: true
+    prefer_low_traffic_multiplier_nodes: true
+    cleanup_dedicated_proxy_after_download: true

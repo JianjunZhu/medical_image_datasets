@@ -7,7 +7,8 @@ dataset_root="$(cd "${script_dir}/.." && pwd)"
 raw_dir="${RAW_DIR:-${dataset_root}/data/raw/huggingface}"
 manifest_dir="${dataset_root}/data/manifests"
 status_file="${manifest_dir}/download_status.json"
-tasks="${FLARE24_TASKS:-task1,task2,task3}"
+default_datasets="pancancer_ct_seg,task2_laptop_seg,task3_domain_adaptation,task4_ct_fm,task4_mri_fm,flare26_mllm_3d,task5_mllm_2d,task6_medagent,task1_recist_to_3d,task1_recist_to_3d_dockers"
+datasets="${FLARE_MEDFM_DATASETS:-${default_datasets}}"
 max_retries="${MAX_RETRIES:-5}"
 retry_seconds="${RETRY_SECONDS:-120}"
 use_proxy="${USE_PROXY:-0}"
@@ -17,11 +18,22 @@ dedicated_proxy_pid_file="${DEDICATED_PROXY_PID_FILE:-${dataset_root}/logs/downl
 
 mkdir -p "${raw_dir}" "${manifest_dir}" "${dataset_root}/logs"
 
-repo_for_task() {
+repo_for_dataset() {
+  if printf '%s' "$1" | grep -q '/'; then
+    printf '%s\n' "$1"
+    return 0
+  fi
   case "$1" in
-    task1) printf '%s\n' "FLARE-MedFM/FLARE-Task1-Pancancer" ;;
-    task2) printf '%s\n' "FLARE-MedFM/FLARE-Task2-LaptopSeg" ;;
-    task3) printf '%s\n' "FLARE-MedFM/FLARE-Task3-DomainAdaption" ;;
+    pancancer_ct_seg) printf '%s\n' "FLARE-MedFM/PancancerCTSeg" ;;
+    task2_laptop_seg) printf '%s\n' "FLARE-MedFM/FLARE-Task2-LaptopSeg" ;;
+    task3_domain_adaptation) printf '%s\n' "FLARE-MedFM/FLARE-Task3-DomainAdaption" ;;
+    task4_ct_fm) printf '%s\n' "FLARE-MedFM/FLARE-Task4-CT-FM" ;;
+    task4_mri_fm) printf '%s\n' "FLARE-MedFM/FLARE-Task4-MRI-FM" ;;
+    flare26_mllm_3d) printf '%s\n' "FLARE-MedFM/FLARE26-MLLM-3D" ;;
+    task5_mllm_2d) printf '%s\n' "FLARE-MedFM/FLARE-Task5-MLLM-2D" ;;
+    task6_medagent) printf '%s\n' "FLARE-MedFM/FLARE-Task6-MedAgent" ;;
+    task1_recist_to_3d) printf '%s\n' "FLARE-MedFM/FLARE-Task1-PancancerRECIST-to-3D" ;;
+    task1_recist_to_3d_dockers) printf '%s\n' "FLARE-MedFM/FLARE-Task1-PancancerRECIST-to-3D-Dockers" ;;
     *) return 1 ;;
   esac
 }
@@ -66,7 +78,7 @@ downloaded_files() {
 
 write_status() {
   local status="$1"
-  local active_task="${2:-}"
+  local active_dataset="${2:-}"
   local active_repo="${3:-}"
   local finished_at="${4:-null}"
   local now
@@ -76,9 +88,9 @@ write_status() {
   fi
   cat > "${status_file}" <<EOF
 {
-  "dataset": "FLARE24",
-  "tasks": "${tasks}",
-  "active_task": "${active_task}",
+  "dataset": "FLARE-MedFM",
+  "datasets": "${datasets}",
+  "active_dataset": "${active_dataset}",
   "active_repo": "${active_repo}",
   "download_dir": "data/raw/huggingface",
   "use_proxy": "${use_proxy}",
@@ -105,16 +117,16 @@ cleanup_proxy() {
 }
 
 download_one() {
-  local task="$1"
+  local dataset_key="$1"
   local repo local_dir
-  repo="$(repo_for_task "${task}")" || {
-    printf '[%s] unsupported task=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${task}" >&2
+  repo="$(repo_for_dataset "${dataset_key}")" || {
+    printf '[%s] unsupported dataset=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${dataset_key}" >&2
     return 2
   }
   local_dir="$(dir_for_repo "${repo}")"
-  write_status "running" "${task}" "${repo}"
-  printf '[%s] downloading task=%s repo=%s local_dir=%s\n' \
-    "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${task}" "${repo}" "${local_dir}"
+  write_status "running" "${dataset_key}" "${repo}"
+  printf '[%s] downloading dataset=%s repo=%s local_dir=%s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${dataset_key}" "${repo}" "${local_dir}"
   python - "${repo}" "${local_dir}" <<'PY'
 import os
 import sys
@@ -146,17 +158,17 @@ trap cleanup_proxy EXIT
 attempt=1
 while [ "${attempt}" -le "${max_retries}" ]; do
   printf '[%s] download attempt %s/%s tasks=%s\n' \
-    "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${attempt}" "${max_retries}" "${tasks}"
+    "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${attempt}" "${max_retries}" "${datasets}"
   printf '[%s] network use_proxy=%s proxy_host=%s\n' \
     "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${use_proxy}" "${proxy_host}"
   status=0
-  IFS=',' read -r -a task_array <<EOF
-${tasks}
+  IFS=',' read -r -a dataset_array <<EOF
+${datasets}
 EOF
-  for task in "${task_array[@]}"; do
-    task="$(printf '%s' "${task}" | tr -d '[:space:]')"
-    [ -n "${task}" ] || continue
-    download_one "${task}" || {
+  for dataset_key in "${dataset_array[@]}"; do
+    dataset_key="$(printf '%s' "${dataset_key}" | tr -d '[:space:]')"
+    [ -n "${dataset_key}" ] || continue
+    download_one "${dataset_key}" || {
       status=$?
       break
     }

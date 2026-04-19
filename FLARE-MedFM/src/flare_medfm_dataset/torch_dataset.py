@@ -1,14 +1,14 @@
-"""PyTorch- and MONAI-friendly adapters for FLARE24."""
+"""PyTorch- and MONAI-friendly adapters for FLARE-MedFM."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from .dataset import FLARE24Case, FLARE24Index
+from .dataset import FLAREMedFMCase, FLAREMedFMIndex
 
 
-class FLARE24TorchDataset:
+class FLAREMedFMTorchDataset:
     """Map-style dataset compatible with PyTorch DataLoader without importing torch."""
 
     def __init__(
@@ -16,7 +16,7 @@ class FLARE24TorchDataset:
         dataset_root: str | Path,
         *,
         manifest_path: str | Path | None = None,
-        task: str | None = None,
+        dataset: str | None = None,
         split: str | None = None,
         modality: str | None = None,
         case_ids: Iterable[str] | None = None,
@@ -26,10 +26,10 @@ class FLARE24TorchDataset:
         load_images: bool = False,
         include_metadata: bool = True,
     ):
-        self.index = FLARE24Index(
+        self.index = FLAREMedFMIndex(
             dataset_root,
             manifest_path=manifest_path,
-            task=task,
+            dataset=dataset,
             split=split,
             modality=modality,
             case_ids=case_ids,
@@ -49,12 +49,12 @@ class FLARE24TorchDataset:
             return self.transform(sample)
         return sample
 
-    def sample_from_case(self, record: FLARE24Case) -> dict[str, Any]:
+    def sample_from_case(self, record: FLAREMedFMCase) -> dict[str, Any]:
         record.require_complete()
         sample: dict[str, Any] = {
             "image": str(record.image),
             "label": str(record.label) if record.label is not None else None,
-            "task": record.task,
+            "dataset": record.dataset,
             "case_id": record.case_id,
             "split": record.split,
             "modality": record.modality,
@@ -65,7 +65,7 @@ class FLARE24TorchDataset:
                     "image_path": str(record.image),
                     "label_path": str(record.label) if record.label is not None else "",
                     "label_type": record.label_type,
-                    "task_dir": record.task_dir,
+                    "dataset_dir": record.dataset_dir,
                     "source_root": str(record.source_root) if record.source_root is not None else "",
                 }
             )
@@ -86,7 +86,7 @@ def build_monai_dataset(
     *,
     transform: Callable[[dict[str, Any]], Any] | None = None,
     manifest_path: str | Path | None = None,
-    task: str | None = None,
+    dataset: str | None = None,
     split: str | None = None,
     modality: str | None = None,
     case_ids: Iterable[str] | None = None,
@@ -95,10 +95,10 @@ def build_monai_dataset(
     dataset_cls: type | None = None,
     **dataset_kwargs: Any,
 ) -> Any:
-    adapter = FLARE24TorchDataset(
+    adapter = FLAREMedFMTorchDataset(
         dataset_root,
         manifest_path=manifest_path,
-        task=task,
+        dataset=dataset,
         split=split,
         modality=modality,
         case_ids=case_ids,

@@ -1,4 +1,4 @@
-"""Path-level dataset interface for FLARE24 snapshots."""
+"""Path-level dataset interface for FLARE-MedFM snapshots."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from typing import Iterable
 
 
 @dataclass(frozen=True)
-class FLARE24Case:
-    task: str
-    task_dir: str
+class FLAREMedFMCase:
+    dataset: str
+    dataset_dir: str
     case_id: str
     split: str
     modality: str
@@ -28,12 +28,12 @@ class FLARE24Case:
     def complete(self) -> bool:
         return self.image.is_file() and (self.label is None or self.label.is_file())
 
-    def require_complete(self) -> "FLARE24Case":
+    def require_complete(self) -> "FLAREMedFMCase":
         missing = [str(self.image)] if not self.image.is_file() else []
         if self.label is not None and not self.label.is_file():
             missing.append(str(self.label))
         if missing:
-            key = f"{self.task}/{self.case_id}/{self.split}"
+            key = f"{self.dataset}/{self.case_id}/{self.split}"
             raise FileNotFoundError(f"{key} is incomplete; missing {len(missing)} files: {missing[:3]}")
         return self
 
@@ -44,8 +44,8 @@ class FLARE24Case:
             return str(path.relative_to(relative_to)) if relative_to is not None else str(path)
 
         return {
-            "task": self.task,
-            "task_dir": self.task_dir,
+            "dataset": self.dataset,
+            "dataset_dir": self.dataset_dir,
             "case_id": self.case_id,
             "split": self.split,
             "modality": self.modality,
@@ -58,13 +58,13 @@ class FLARE24Case:
         }
 
 
-class FLARE24Index:
+class FLAREMedFMIndex:
     def __init__(
         self,
         dataset_root: str | Path,
         *,
         manifest_path: str | Path | None = None,
-        task: str | None = None,
+        dataset: str | None = None,
         split: str | None = None,
         modality: str | None = None,
         case_ids: Iterable[str] | None = None,
@@ -79,8 +79,8 @@ class FLARE24Index:
         )
         allowed = set(case_ids) if case_ids is not None else None
         self.records = self._load_manifest(self.manifest_path) if self.manifest_path.is_file() else []
-        if task is not None:
-            self.records = [record for record in self.records if record.task == task]
+        if dataset is not None:
+            self.records = [record for record in self.records if record.dataset == dataset]
         if split is not None:
             self.records = [record for record in self.records if record.split == split]
         if modality is not None:
@@ -91,8 +91,8 @@ class FLARE24Index:
             self.records = [record for record in self.records if record.has_label]
         if complete_only:
             self.records = [record for record in self.records if record.complete]
-        self.records = sorted(self.records, key=lambda item: (item.task, item.split, item.case_id, str(item.image)))
-        self._by_key = {(record.task, record.case_id, record.split): record for record in self.records}
+        self.records = sorted(self.records, key=lambda item: (item.dataset, item.split, item.case_id, str(item.image)))
+        self._by_key = {(record.dataset, record.case_id, record.split): record for record in self.records}
 
     def __len__(self) -> int:
         return len(self.records)
@@ -101,14 +101,17 @@ class FLARE24Index:
         for index in range(len(self)):
             yield self[index]
 
-    def __getitem__(self, index: int) -> FLARE24Case:
+    def __getitem__(self, index: int) -> FLAREMedFMCase:
         return self.records[index]
 
-    def get(self, task: str, case_id: str, split: str = "train") -> FLARE24Case:
-        return self._by_key[(task, case_id, split)]
+    def get(self, dataset: str, case_id: str, split: str = "train") -> FLAREMedFMCase:
+        return self._by_key[(dataset, case_id, split)]
+
+    def datasets(self) -> list[str]:
+        return sorted({record.dataset for record in self.records})
 
     def tasks(self) -> list[str]:
-        return sorted({record.task for record in self.records})
+        return self.datasets()
 
     def splits(self) -> list[str]:
         return sorted({record.split for record in self.records})
@@ -119,10 +122,13 @@ class FLARE24Index:
     def case_ids(self) -> list[str]:
         return [record.case_id for record in self.records]
 
-    def by_task(self, task: str) -> list[FLARE24Case]:
-        return [record for record in self.records if record.task == task]
+    def by_dataset(self, dataset: str) -> list[FLAREMedFMCase]:
+        return [record for record in self.records if record.dataset == dataset]
 
-    def by_split(self, split: str) -> list[FLARE24Case]:
+    def by_task(self, task: str) -> list[FLAREMedFMCase]:
+        return self.by_dataset(task)
+
+    def by_split(self, split: str) -> list[FLAREMedFMCase]:
         return [record for record in self.records if record.split == split]
 
     @classmethod
@@ -132,9 +138,9 @@ class FLARE24Index:
         split_file: str | Path,
         *,
         manifest_path: str | Path | None = None,
-        task: str | None = None,
+        dataset: str | None = None,
         complete_only: bool = False,
-    ) -> "FLARE24Index":
+    ) -> "FLAREMedFMIndex":
         case_ids = [
             line.strip().split(",")[0]
             for line in Path(split_file).expanduser().read_text().splitlines()
@@ -143,22 +149,22 @@ class FLARE24Index:
         return cls(
             dataset_root,
             manifest_path=manifest_path,
-            task=task,
+            dataset=dataset,
             case_ids=case_ids,
             complete_only=complete_only,
         )
 
-    def _load_manifest(self, manifest_path: Path) -> list[FLARE24Case]:
-        records: list[FLARE24Case] = []
+    def _load_manifest(self, manifest_path: Path) -> list[FLAREMedFMCase]:
+        records: list[FLAREMedFMCase] = []
         with manifest_path.open(newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
                 label = self.dataset_root / row["label"] if row.get("label") else None
                 source_root = self.dataset_root / row["source_root"] if row.get("source_root") else None
                 records.append(
-                    FLARE24Case(
-                        task=row["task"],
-                        task_dir=row.get("task_dir", ""),
+                    FLAREMedFMCase(
+                        dataset=row.get("dataset", row.get("task", "")),
+                        dataset_dir=row.get("dataset_dir", row.get("task_dir", "")),
                         case_id=row["case_id"],
                         split=row["split"],
                         modality=row.get("modality", ""),
