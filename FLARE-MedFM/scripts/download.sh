@@ -9,8 +9,11 @@ manifest_dir="${dataset_root}/data/manifests"
 status_file="${manifest_dir}/download_status.json"
 default_datasets="pancancer_ct_seg,task2_laptop_seg,task3_domain_adaptation,task4_ct_fm,task4_mri_fm,flare26_mllm_3d,task5_mllm_2d,task6_medagent,task1_recist_to_3d,task1_recist_to_3d_dockers"
 datasets="${FLARE_MEDFM_DATASETS:-${default_datasets}}"
-max_retries="${MAX_RETRIES:-5}"
-retry_seconds="${RETRY_SECONDS:-120}"
+max_retries="${MAX_RETRIES:-20}"
+retry_seconds="${RETRY_SECONDS:-60}"
+hub_download_timeout="${HF_HUB_DOWNLOAD_TIMEOUT:-120}"
+hub_etag_timeout="${HF_HUB_ETAG_TIMEOUT:-60}"
+hub_max_workers="${HF_HUB_MAX_WORKERS:-4}"
 use_proxy="${USE_PROXY:-0}"
 proxy_host="${PROXY_HOST:-127.0.0.1:17890}"
 auto_stop_proxy="${AUTO_STOP_PROXY:-0}"
@@ -56,6 +59,9 @@ load_token() {
 }
 
 configure_network() {
+  export HF_HUB_DOWNLOAD_TIMEOUT="${hub_download_timeout}"
+  export HF_HUB_ETAG_TIMEOUT="${hub_etag_timeout}"
+  export HF_HUB_MAX_WORKERS="${hub_max_workers}"
   if [ "${use_proxy}" = "1" ] || [ "${use_proxy}" = "true" ]; then
     export http_proxy="http://${proxy_host}"
     export https_proxy="http://${proxy_host}"
@@ -97,6 +103,11 @@ write_status() {
   "proxy_host": "${proxy_host}",
   "auto_stop_proxy": "${auto_stop_proxy}",
   "dedicated_proxy_pid_file": "${dedicated_proxy_pid_file}",
+  "max_retries": ${max_retries},
+  "retry_seconds": ${retry_seconds},
+  "hf_hub_download_timeout": ${hub_download_timeout},
+  "hf_hub_etag_timeout": ${hub_etag_timeout},
+  "hf_hub_max_workers": ${hub_max_workers},
   "pid": $$,
   "status": "${status}",
   "last_checked_at": "${now}",
@@ -143,6 +154,7 @@ snapshot_download(
     local_dir_use_symlinks=False,
     resume_download=True,
     token=token,
+    max_workers=int(os.environ.get("HF_HUB_MAX_WORKERS", "4")),
 )
 PY
 }
@@ -161,6 +173,9 @@ while [ "${attempt}" -le "${max_retries}" ]; do
     "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${attempt}" "${max_retries}" "${datasets}"
   printf '[%s] network use_proxy=%s proxy_host=%s\n' \
     "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${use_proxy}" "${proxy_host}"
+  printf '[%s] retry max_retries=%s retry_seconds=%s hf_timeout=%s hf_etag_timeout=%s hf_max_workers=%s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${max_retries}" "${retry_seconds}" \
+    "${hub_download_timeout}" "${hub_etag_timeout}" "${hub_max_workers}"
   status=0
   IFS=',' read -r -a dataset_array <<EOF
 ${datasets}

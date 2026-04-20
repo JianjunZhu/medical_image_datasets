@@ -36,6 +36,23 @@ Stop without deleting partial files:
 bash scripts/stop_download.sh
 ```
 
+## Reliability Defaults
+
+The download script uses resumable Hugging Face downloads and retries failed
+attempts. Defaults are tuned for multi-TB datasets and unstable Xet/CAS large
+file transfers:
+
+```bash
+MAX_RETRIES=20
+RETRY_SECONDS=60
+HF_HUB_DOWNLOAD_TIMEOUT=120
+HF_HUB_ETAG_TIMEOUT=60
+HF_HUB_MAX_WORKERS=4
+```
+
+Override these environment variables when a source is especially slow or the
+network is stable enough for higher concurrency.
+
 ## Proxy Strategy
 
 Direct mode is the default:

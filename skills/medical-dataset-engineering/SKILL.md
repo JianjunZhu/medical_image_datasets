@@ -90,6 +90,12 @@ Keep original downloaded files under `data/raw/`. Never mix raw data with code, 
    - Batch test candidate nodes against the real dataset source or mirror, not only a generic connectivity URL.
    - Select the fastest stable node and bind only the download process to that proxy via explicit environment variables or downloader flags.
    - When the download finishes successfully or reaches terminal failure, automatically close the dedicated download proxy and leave the shared/default proxy untouched.
+   - For sources with separate metadata/API and large-object delivery domains, use a mixed strategy when direct object delivery is faster or more stable:
+     - Route source metadata/API hosts through the dedicated proxy with explicit `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `http_proxy`, `https_proxy`, and `all_proxy`.
+     - Route large-object delivery hosts direct with explicit `NO_PROXY` and `no_proxy`.
+     - Example for Hugging Face/Xet sources: keep `huggingface.co` behind the dedicated proxy, but put `cas-bridge.xethub.hf.co`, `.xethub.hf.co`, `xethub.hf.co`, `cas-server.xethub.hf.co`, and `transfer.xethub.hf.co` in `NO_PROXY`.
+     - Verify the running child process environment under `/proc/<pid>/environ` when possible; checking only the parent shell can miss exports applied inside the script.
+     - If pure direct mode cannot connect to the metadata host, do not switch fully direct even if object delivery is fast; keep mixed mode.
 
 7. Dedicated proxy lifecycle:
    - Start the dedicated proxy in the background on non-conflicting ports such as HTTP `127.0.0.1:17890`, SOCKS `127.0.0.1:17891`, and controller `127.0.0.1:19091`.
@@ -99,6 +105,11 @@ Keep original downloaded files under `data/raw/`. Never mix raw data with code, 
    - Switch nodes through the controller API instead of restarting or killing the shared proxy.
    - Keep the dedicated proxy isolated from Codex's own network path when possible.
    - Stop only the dedicated proxy pid after the download completes, after checking that no active download process still depends on it.
+   - Treat the dedicated proxy as disposable infrastructure for one dataset job:
+     - Start it before the job and write `logs/download_proxy.pid`.
+     - Pass `DEDICATED_PROXY_PID_FILE=/absolute/path/to/logs/download_proxy.pid`.
+     - Set `AUTO_STOP_PROXY=1` so terminal success or terminal failure closes only this proxy.
+     - If the job must be restarted to apply new download parameters, expect the old job to stop the dedicated proxy; restart the proxy and reselect the node before restarting the download.
 
 8. Proxy speed testing:
    - Build a short candidate list from low traffic multiplier nodes first.
@@ -108,34 +119,55 @@ Keep original downloaded files under `data/raw/`. Never mix raw data with code, 
    - Prefer sustained dataset-source throughput over one-off latency.
    - If direct connection beats all proxy candidates, use direct mode.
    - If a mirror is slow across direct and proxy tests, treat the source/mirror path as the bottleneck and test another official mirror before over-tuning proxy nodes.
+   - Measure the currently running download separately from synthetic tests:
+     - Sample `du -sb <raw_dir>` twice over a fixed interval such as 60 seconds and compute bytes/sec.
+     - Use a bounded `curl --range` request for direct/proxy tests so the test does not consume excessive traffic.
+     - For a pure direct baseline, use `curl --noproxy "*"` and report connection failures as speed `0`, not as an inconclusive result.
+     - Compare sustained raw-directory growth against single-file `curl` speed; the running job may be faster because it downloads several files concurrently.
 
-9. Unpack and normalize:
+9. Hugging Face gated dataset workflow:
+   - Store tokens outside Git, for example `secrets/hf_token`, and load them in `download.sh` if `HF_TOKEN` is unset.
+   - Use resumable `huggingface_hub.snapshot_download` for repositories that are split into many files.
+   - For multi-TB repositories, set conservative reliability defaults and expose them as environment variables:
+     - `MAX_RETRIES` around `20`
+     - `RETRY_SECONDS` around `60`
+     - `HF_HUB_DOWNLOAD_TIMEOUT` around `120`
+     - `HF_HUB_ETAG_TIMEOUT` around `60`
+     - `HF_HUB_MAX_WORKERS` around `4`
+   - Write these effective values into `data/manifests/download_status.json`.
+   - Distinguish retryable network failures from authorization failures:
+     - `ReadTimeout`, SSL handshake timeout, and transient connection errors are retryable and should resume partial files.
+     - `403 Client Error`, `GatedRepoError`, and "not in the authorized list" mean the token lacks access. Do not keep retrying the same gated repo indefinitely.
+   - For a collection with many repositories, allow `DATASET_LIST`-style selection such as `FLARE_MEDFM_DATASETS=task_a,task_b`.
+   - If one gated repository is unauthorized, record it clearly, skip it when the user agrees, and continue the remaining repositories with a new dataset list.
+
+10. Unpack and normalize:
    - `unpack_archives.py` extracts into `data/raw/extracted/`.
    - Avoid overwriting existing extracted data unless explicitly requested.
    - Normalize avoidable nested directory duplication only when it is deterministic and documented.
 
-10. Verify:
+11. Verify:
    - `verify.py` should check expected archive presence, optional checksums, extracted directory structure, required image/label files, and incomplete cases.
    - Output a clear machine-readable or compact text summary with `status=ok` only when the dataset is usable.
 
-11. Build manifests:
+12. Build manifests:
    - `build_manifest.py` creates a lightweight CSV/JSONL index under `data/manifests/`.
    - Include stable identifiers, task/subset, split if known, image paths, label paths, modality, completeness, and source-relative paths.
    - Filter system metadata files such as macOS `._*`.
 
-12. Build splits:
+13. Build splits:
    - Use deterministic split generation with fixed seed and documented ratios.
    - Store `train.txt`, `val.txt`, `test.txt`, `split.csv`, and `split.yaml` when appropriate.
    - Prefer official splits when provided; otherwise document generated split rules.
 
-13. Add data interfaces:
+14. Add data interfaces:
    - Provide a path-level index class similar to `DatasetIndex`.
    - Provide a case record class with typed paths and `require_complete()`.
    - Support filtering by task/subset/split and lookup by case id.
    - Provide lazy image loading helper such as `load_nifti(path)` with optional imports.
    - Add PyTorch-style and MONAI-style adapters only as optional dependency layers.
 
-14. Validate and commit:
+15. Validate and commit:
    - Run verify, manifest build, and lightweight import checks.
    - Confirm `git status --short` does not include raw archives, extracted data, logs, caches, or secrets.
    - Commit only code, docs, lightweight manifests/splits, and configuration.
